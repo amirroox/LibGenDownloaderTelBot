@@ -245,7 +245,7 @@ async def handlerTextUser(clientP: Client, message: types.Message):
     if not text.isascii():  # Check English Search
         await message.reply('لطفا فقط به صورت انگلیسی سرچ کنید!', reply_to_message_id=msg_id)
         return
-    if re.fullmatch(r'CODE__.+', text):
+    if re.fullmatch(r'CODE__\w+', text, flags=re.IGNORECASE):
         status = await checkJoinMember(clientP, message, message.from_user, config.CHANELS, config.BOT_TOKEN)
         if not status:
             list_heart = ['🩷', '❤️', '🧡', '💛', '💚', '🩵', '🩵', '💙', '💜', '❤️‍🔥']
@@ -260,7 +260,7 @@ async def handlerTextUser(clientP: Client, message: types.Message):
                 "اول که امیدوارم خوب باشی، برای استفاده از ربات یه وقت بذار و توی کانال های زیر عضو شو چون خیلی بهمون کمک میکنه.",
                 reply_markup=panel_chanels)
             return
-        md5 = text.replace('CODE__', '')
+        md5 = text.replace('CODE__', '').replace('code__', '')
         this_msg = await message.reply("صبر کنید تا اطلاعات رو بروز رسانی کنیم ...", reply_to_message_id=msg_id)
         result = await mainScrapper(md5)
         if result['check'] == 'Not Found':
@@ -276,7 +276,7 @@ async def handlerTextUser(clientP: Client, message: types.Message):
                    f'🎨 ژانر: {result["series"]}\n\n'
                    f'🖊️ نویسندگان: {result["authors"]}\n\n'
                    f'📓 ناشر: {result["publisher"]}\n\n'
-                   f'👅 زبان: {result["lang"]}\n\n'
+                   f'👅 زبان: {result["language"]}\n\n'
                    f'⏱ سال انتشار: {result["year"]}\n\n'
                    f'📃 تعداد صفحات موجود: {result["pages"]}\n\n'
                    f'💾 حجم: {result["size"]}\n\n'
@@ -297,17 +297,16 @@ async def handlerTextUser(clientP: Client, message: types.Message):
             else:
                 temp_list.append([Button(f'لینک کمکی', url=link)])
             i_temp += 1
-        Link_panel = InlineKeyboard(temp_list)
+        link_panel = InlineKeyboard(temp_list)
+        # gg = InlineKeyboard([[Button(f'حذف از مورد علاقه', url=f'https://ro-ox.com')]])
         copy_right = await message.reply('میتونید از طریق پنل زیر کتاب خودتون رو دانلود کنید :) ',
-                                         reply_markup=Link_panel,
-                                         reply_to_message_id=this_msg1.id)
+                                         reply_to_message_id=this_msg1.id, reply_markup=link_panel)
         await asyncio.sleep(1.3)
         notif_msg = await message.reply(
             '**لطفا لینک هارو توی سیو مسیج ذخیره کنید، چون برای موارد کپی رایت تا یه دقیقه دیگه پاک میشن!**',
             reply_to_message_id=this_msg1.id)
         await asyncio.sleep(config.TIMEOUT_DELETE)
         await app.delete_messages(chat_id, [notif_msg.id, copy_right.id])  # Delete Copy Right Content
-        await message.reply("همچین ساختاری برای جستجو فیلم مناسب نیست!", reply_to_message_id=msg_id)
         return
     else:
         if len(text) < 3:
@@ -322,6 +321,7 @@ async def handlerTextUser(clientP: Client, message: types.Message):
         for te in textList:
             await message.reply(te, reply_to_message_id=msg_id)
         await app.delete_messages(chat_id, this_msg1.id)
+        return
 
 
 # handler Start Bot For Admin
@@ -423,7 +423,7 @@ async def handlerTextAdmin(clientP: Client, message: types.Message):
                        f'🎨 ژانر: {res["series"]}\n\n'
                        f'🖊️ نویسندگان: {res["authors"]}\n\n'
                        f'📓 ناشر: {res["publisher"]}\n\n'
-                       f'👅 زبان: {res["lang"]}\n\n'
+                       f'👅 زبان: {res["language"]}\n\n'
                        f'⏱ سال انتشار: {res["year"]}\n\n'
                        f'📃 تعداد صفحات موجود: {res["pages"]}\n\n'
                        f'💾 حجم: {res["size"]}\n\n'
@@ -703,7 +703,7 @@ async def mainScrapper(md5_: str) -> dict:
     connection.close()
     if is_find:
         is_find['check'] = True
-        is_find['link'] = json.loads(is_find['download_link'])
+        is_find['download_link'] = json.loads(is_find['download_link'])
         return is_find  # Return Dic
 
     link = f'{config.MAIN_SITE}book/index.php?md5={md5_}'  # For Get Link
@@ -744,10 +744,10 @@ async def mainScrapper(md5_: str) -> dict:
             year = ''
 
         try:
-            lang = details_box.find_all('tr')[6].find_all('td')[1].text.strip()
+            language = details_box.find_all('tr')[6].find_all('td')[1].text.strip()
         except Exception as ex:
             print('Lang Not Found: ', ex)
-            lang = ''
+            language = ''
 
         try:
             pages = details_box.find_all('tr')[6].find_all('td')[3].text.strip()
@@ -769,7 +769,7 @@ async def mainScrapper(md5_: str) -> dict:
 
         try:
             path_img = f'downloads/{md5_}_temp.jpg'
-            img_url = str(details_box.find_all('tr')[1].find_all('td')[0].find('a').find('img').get('href').strip())
+            img_url = str(details_box.find_all('tr')[1].find_all('td')[0].find('a').find('img').get('src').strip())
             img_data = requests.get(f'{config.MAIN_SITE}{img_url}').content
             with open(path_img, 'wb') as handler:
                 handler.write(img_data)
@@ -798,7 +798,7 @@ async def mainScrapper(md5_: str) -> dict:
             soup = BeautifulSoup(html_content, "html.parser")
             box_download = soup.select_one('div#download')
             link_download.append(box_download.find('h2').find('a').get('href'))  # MAIN LINK
-            for i in range(0, 4):
+            for i in range(0, 3):
                 try:
                     link_download.append(box_download.find('ul').find_all('li')[i].find('a').get('href'))
                 except Exception as ex:
@@ -815,7 +815,7 @@ async def mainScrapper(md5_: str) -> dict:
             'authors': author,
             'year': year,
             'publisher': publisher,
-            'lang': lang,
+            'language': language,
             'pages': pages,
             'size': size,
             'extention': extention,
@@ -828,7 +828,7 @@ async def mainScrapper(md5_: str) -> dict:
         cursor_db.execute("INSERT INTO books"
                           " (title, md5, download_link, authors, publisher, year, pages, language, size, extension, series, path_img) "
                           "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                          (name, md5_, link_download_json, author, publisher, year, pages, lang, size,
+                          (name, md5_, link_download_json, author, publisher, year, pages, language, size,
                            extention, series, path_img))
         connection.commit()
         cursor_db.close()

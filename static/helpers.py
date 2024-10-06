@@ -3,8 +3,9 @@ import mysql.connector
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.pooling import PooledMySQLConnection
 
-import config
 from typing import Union
+
+from static import config
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     pool_name="mypool",
