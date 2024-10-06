@@ -782,7 +782,7 @@ async def mainScrapper(md5_: str) -> dict:
             print('Links Download Not Found: ', ex)
             for admin_id in config.ADMINS_ID:
                 try:
-                    await app.send_message(chat_id=admin_id, text=f"Error Site: Donyaye Seryal\n"
+                    await app.send_message(chat_id=admin_id, text=f"Error Site\n"
                                                                   f"Name MDF: {md5_}\n"
                                                                   f"Status: Failed!")
                 except Exception as ex:
@@ -839,7 +839,7 @@ async def mainScrapper(md5_: str) -> dict:
     else:
         for admin_id in config.ADMINS_ID:
             try:
-                await app.send_message(chat_id=admin_id, text=f"Error Site: Donyaye Seryal\n"
+                await app.send_message(chat_id=admin_id, text=f"Error Site\n"
                                                               f"Name MDF: {md5_}\n"
                                                               f"Status: Failed!")
             except Exception as ex:
