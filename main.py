@@ -271,17 +271,17 @@ async def handlerTextUser(clientP: Client, message: types.Message):
                                         'در ارسال لینک به مشکل خوردیم! لطفا چند ساعت بعد دوباره امتحان کنید!')
             return
         name_unique = str(result["title"])
-        content = (f'🦋 نام: {name_unique}\n\n'
-                   f'📚 کد: {result["md5"]}\n\n'
-                   f'🎨 ژانر: {result["series"]}\n\n'
-                   f'🖊️ نویسندگان: {result["authors"]}\n\n'
-                   f'📓 ناشر: {result["publisher"]}\n\n'
-                   f'👅 زبان: {result["language"]}\n\n'
-                   f'⏱ سال انتشار: {result["year"]}\n\n'
-                   f'📃 تعداد صفحات موجود: {result["pages"]}\n\n'
-                   f'💾 حجم: {result["size"]}\n\n'
+        content = (f'🦋 Name: {name_unique}\n\n'
+                   f'📚 Code: {result["md5"]}\n\n'
+                   f'🎨 Series: {result["series"]}\n\n'
+                   f'🖊️ Authors: {result["authors"]}\n\n'
+                   f'📓 Publisher: {result["publisher"]}\n\n'
+                   f'👅 Language: {result["language"]}\n\n'
+                   f'⏱ Year of publication: {result["year"]}\n\n'
+                   f'📃 Number of pages available: {result["pages"]}\n\n'
+                   f'💾 Size: {result["size"]}\n\n'
                    # f'🔖 توضیحات: {result["description"]}\n\n'
-                   f'📖 فرمت فایل: {result["extention"]}\n')
+                   f'📖 File Format: {result["extention"]}\n')
         try:
             this_msg1 = await message.reply_photo(result['path_img'], caption=content, reply_to_message_id=msg_id)
             await app.delete_messages(chat_id, this_msg.id)
@@ -418,18 +418,17 @@ async def handlerTextAdmin(clientP: Client, message: types.Message):
         result = cursor_db.fetchall()
         content = ''
         for res in result:
-            content = (f'🦋 نام: {res["title"]}\n\n'
-                       f'📚 کد: {res["md5"]}\n\n'
-                       f'🎨 ژانر: {res["series"]}\n\n'
-                       f'🖊️ نویسندگان: {res["authors"]}\n\n'
-                       f'📓 ناشر: {res["publisher"]}\n\n'
-                       f'👅 زبان: {res["language"]}\n\n'
-                       f'⏱ سال انتشار: {res["year"]}\n\n'
-                       f'📃 تعداد صفحات موجود: {res["pages"]}\n\n'
-                       f'💾 حجم: {res["size"]}\n\n'
-                       f'📖 فرمت فایل: {res["extention"]}\n\n'
+            content = (f'🦋 Name: {res["title"]}\n\n'
+                       f'📚 Code: {res["md5"]}\n\n'
+                       f'🎨 Series: {res["series"]}\n\n'
+                       f'🖊️ Authors: {res["authors"]}\n\n'
+                       f'📓 Publisher: {res["publisher"]}\n\n'
+                       f'👅 Language: {res["language"]}\n\n'
+                       f'⏱ Year of publication: {res["year"]}\n\n'
+                       f'📃 Number of pages available: {res["pages"]}\n\n'
+                       f'💾 Size: {res["size"]}\n\n'
                        # f'🔖 توضیحات: {result["description"]}\n\n'
-                       f'📖 فرمت فایل: {res["extention"]}\n')
+                       f'📖 File Format: {res["extention"]}\n')
             await message.reply(content, reply_to_message_id=msg_id, reply_markup=admin_panel)
         cursor_db.close()
         connection.close()
@@ -681,8 +680,8 @@ def dataSeperator(data_dict: dict) -> list:
         name = d  # Name
         code = data_dict[d]  # MD5 Link
         code = f'`CODE__{code}`'
-        text = (f"🔹️ نام انگلیسی: {name}\n"
-                f"⭐️ کپی سریع کد: {code}\n\n")
+        text = (f"🔹️ Name: {name}\n\n"
+                f"⭐️ Quick code copy: {code}\n\n")
         content += text
         if j == 20:
             result.append(content)
