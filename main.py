@@ -96,7 +96,7 @@ users_panel = Keyboard(
     placeholder="📍 انتخاب کنید :",
     keyboard=[
         ['سرچ بر اساس اسم | ❤️', 'سرچ بر اساس نویسنده | 🙍‍♂️'],
-        ['سرچ بر اساس ناشر | ❤️', 'سرچ بر اساس نویسنده | 🙍‍♂️'],
+        ['سرچ بر اساس ناشر | 🖊️', 'سرچ بر اساس ژانر | 🎨'],
         ['راهنمای ربات | ❓', 'ارتباط با سازنده | 🖥️'],
     ]
 )
@@ -218,12 +218,24 @@ async def handlerTextUser(clientP: Client, message: types.Message):
                 "اول که امیدوارم خوب باشی، برای استفاده از ربات یه وقت بذار و توی کانال های زیر عضو شو چون خیلی بهمون کمک میکنه.",
                 reply_markup=panel_chanels)
             return
-    if text == 'بازگشت | ◀️':
-        step_user[user_id] = {}
-        await message.reply('به صفحه اصلی برگشتید :)', reply_markup=users_panel)
-        return
-    elif re.search(r'[@$%^*]', text):
+    if re.search(r'[@$%^*]', text):
         await message.reply('دوست من از کارکتر های غیر مجاز تو سرچ استفاده نکن!', reply_markup=users_panel)
+        return
+    elif text == 'سرچ بر اساس اسم | ❤️':
+        step_user[user_id] = {'search': 'title'}
+        await message.reply('تمامی مورادی که سرچ میکنید بر اساس اسم کتاب ها لیست میشه!', reply_markup=users_panel)
+        return
+    elif text == 'سرچ بر اساس نویسنده | 🙍‍♂️':
+        step_user[user_id] = {'search': 'author'}
+        await message.reply('تمامی مورادی که سرچ میکنید بر اساس نویسنده کتاب لیست میشه!', reply_markup=users_panel)
+        return
+    elif text == 'سرچ بر اساس ناشر | 🖊️':
+        step_user[user_id] = {'search': 'publisher'}
+        await message.reply('تمامی مورادی که سرچ میکنید بر اساس ناشر کتاب ها لیست میشه!', reply_markup=users_panel)
+        return
+    elif text == 'سرچ بر اساس ژانر | 🎨':
+        step_user[user_id] = {'search': 'series'}
+        await message.reply('تمامی مورادی که سرچ میکنید بر اساس ژانر و تگ کتاب ها لیست میشه!', reply_markup=users_panel)
         return
     elif text == 'راهنمای ربات | ❓':
         await message.reply('**راهنمای استفاده:**'
@@ -315,7 +327,12 @@ async def handlerTextUser(clientP: Client, message: types.Message):
             await message.reply('لطفا از کارکتر های بیشتری استفاده کنید!', reply_to_message_id=msg_id)
             return
         this_msg1 = await message.reply("لطفا صبر کنید تا بگردیم ...", reply_to_message_id=msg_id)
-        data = checkQuerySearch(text)  # str
+        try:
+            data = checkQuerySearch(text, step_user[user_id]['search'])  # str
+        except Exception as ex:
+            print(f'Set Default Value User: {ex}')
+            step_user[user_id] = {'search': 'title'}
+            data = checkQuerySearch(text, step_user[user_id]['search'])
         if len(data) == 0:
             await app.edit_message_text(chat_id, this_msg1.id, 'متاسفانه کتاب مورد نظر شما پیدا نشد!')
             return
@@ -612,11 +629,12 @@ async def callback_query_update(clientP: Client, callback_query: "CallbackQuery"
 
 
 # Check Query In DB or Not (For Scrapping)
-def checkQuerySearch(queryInp: str) -> dict:  # Query For Search Movie Or Series (Return Data Str)
+def checkQuerySearch(queryInp: str, category_search='title') -> dict:  # Query For Search Movie Or Series (Return Data Str)
     query = queryInp.strip().lower()
     connection = create_connection()
     cursor_db = connection.cursor(buffered=True, dictionary=True)
-    cursor_db.execute("SELECT data FROM search WHERE query = %s", (query,))
+    cursor_db.execute("SELECT data FROM search WHERE query = %s and category = %s",
+                      (query, category_search))
     is_query = cursor_db.fetchone()
     cursor_db.close()
     connection.close()
@@ -627,7 +645,7 @@ def checkQuerySearch(queryInp: str) -> dict:  # Query For Search Movie Or Series
     data_list = {}  # All Book Link Title
     maximum_page_search = 50  # Dafault 100 Per Page
 
-    response = requests.get(f'{config.MAIN_SITE}search.php?req={query}&res={maximum_page_search}&column=title',
+    response = requests.get(f'{config.MAIN_SITE}search.php?req={query}&res={maximum_page_search}&column={category_search}',
                             headers=config.HEADERS)
     html_content = response.content.decode('utf-8')
     soup = BeautifulSoup(html_content, "html.parser")
@@ -681,7 +699,8 @@ def checkQuerySearch(queryInp: str) -> dict:  # Query For Search Movie Or Series
     data_str = json.dumps(data_list)
     connection = create_connection()
     cursor_db = connection.cursor(buffered=True)
-    cursor_db.execute("INSERT INTO search (query, data) VALUES (%s, %s)", (query, data_str))
+    cursor_db.execute("INSERT INTO search (category, query, data) VALUES (%s, %s, %s)",
+                      (category_search, query, data_str))
     connection.commit()
     cursor_db.close()
     connection.close()
@@ -698,7 +717,7 @@ def dataSeperator(data_dict: dict) -> list:
         name = d  # Name
         code = data_dict[d]['md5']  # MD5 Link
         info = (
-            f'Author: **{data_dict[d]["author"]}** - Publisher: **{data_dict[d]["author"]}** - Lang: **{data_dict[d]["lang"]}**\n'
+            f'Author: **{data_dict[d]["author"]}** - Publisher: **{data_dict[d]["publisher"]}** - Lang: **{data_dict[d]["lang"]}**\n'
             f'Format File: **{data_dict[d]["extension"]}** - Size: **{data_dict[d]["size"]}**')
         code = f'`CODE__{code}`'
         text = (f"🔹️ Name: {name}\n\n"

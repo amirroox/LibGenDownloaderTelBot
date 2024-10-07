@@ -9,7 +9,7 @@ from static import config
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     pool_name="mypool",
-    pool_size=10,
+    pool_size=5,
     host="localhost",
     user=config.DATABASE_USERNAME,
     password=config.DATABASE_PASSWORD,

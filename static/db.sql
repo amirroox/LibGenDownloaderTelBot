@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 06, 2024 at 03:28 PM
+-- Generation Time: Oct 07, 2024 at 01:28 PM
 -- Server version: 10.4.24-MariaDB
 -- PHP Version: 7.4.29
 
@@ -72,6 +72,7 @@ INSERT INTO `config` (`id`, `name`, `value`) VALUES
 
 CREATE TABLE `search` (
   `id` bigint(20) NOT NULL,
+  `category` varchar(128) NOT NULL,
   `query` varchar(1024) NOT NULL,
   `data` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
