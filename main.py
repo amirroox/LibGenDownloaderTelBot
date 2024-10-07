@@ -95,6 +95,8 @@ users_panel = Keyboard(
     resize_keyboard=True,
     placeholder="📍 انتخاب کنید :",
     keyboard=[
+        ['سرچ بر اساس اسم | ❤️', 'سرچ بر اساس نویسنده | 🙍‍♂️'],
+        ['سرچ بر اساس ناشر | ❤️', 'سرچ بر اساس نویسنده | 🙍‍♂️'],
         ['راهنمای ربات | ❓', 'ارتباط با سازنده | 🖥️'],
     ]
 )
@@ -281,7 +283,7 @@ async def handlerTextUser(clientP: Client, message: types.Message):
                    f'📃 Number of pages available: {result["pages"]}\n\n'
                    f'💾 Size: {result["size"]}\n\n'
                    # f'🔖 توضیحات: {result["description"]}\n\n'
-                   f'📖 File Format: {result["extention"]}\n')
+                   f'📖 File Format: {result["extension"]}\n')
         try:
             this_msg1 = await message.reply_photo(result['path_img'], caption=content, reply_to_message_id=msg_id)
             await app.delete_messages(chat_id, this_msg.id)
@@ -428,7 +430,7 @@ async def handlerTextAdmin(clientP: Client, message: types.Message):
                        f'📃 Number of pages available: {res["pages"]}\n\n'
                        f'💾 Size: {res["size"]}\n\n'
                        # f'🔖 توضیحات: {result["description"]}\n\n'
-                       f'📖 File Format: {res["extention"]}\n')
+                       f'📖 File Format: {res["extension"]}\n')
             await message.reply(content, reply_to_message_id=msg_id, reply_markup=admin_panel)
         cursor_db.close()
         connection.close()
@@ -623,9 +625,9 @@ def checkQuerySearch(queryInp: str) -> dict:  # Query For Search Movie Or Series
         return data
 
     data_list = {}  # All Book Link Title
-    maximum_page_search = 1  # Dafault 100 Per Page
+    maximum_page_search = 50  # Dafault 100 Per Page
 
-    response = requests.get(f'{config.MAIN_SITE}search.php?req={query}&res=100&column=title',
+    response = requests.get(f'{config.MAIN_SITE}search.php?req={query}&res={maximum_page_search}&column=title',
                             headers=config.HEADERS)
     html_content = response.content.decode('utf-8')
     soup = BeautifulSoup(html_content, "html.parser")
@@ -637,9 +639,16 @@ def checkQuerySearch(queryInp: str) -> dict:  # Query For Search Movie Or Series
             if ii == 0:
                 ii += 1
                 continue
-            id_book = book.find('td').text.strip()
 
+            id_book = book.find('td').text.strip()
+            author_book = book.find_all('td')[1].text.strip()
             title_column = book.find_all('td')[2].find_all('a')
+            publisher_book = book.find_all('td')[3].text.strip()
+            year_book = book.find_all('td')[4].text.strip()
+            lang_book = book.find_all('td')[6].text.strip()
+            extension_book = book.find_all('td')[8].text.strip()
+            size_book = book.find_all('td')[7].text.strip()
+
             link_book = ''
             if len(title_column) > 1:
                 row = -1
@@ -658,7 +667,16 @@ def checkQuerySearch(queryInp: str) -> dict:  # Query For Search Movie Or Series
             title_book = title_column[row].text.strip()
             link_book = re.findall(r'\?md5=(\w+)$', title_column[row].get('href'))[0]  # MD5 FILE LINK
 
-            data_list[title_book] = link_book
+            data_list[title_book] = {
+                'id': id_book,
+                'author': author_book,
+                'publisher': publisher_book,
+                'md5': link_book,
+                'year': year_book,
+                'lang': lang_book,
+                'size': size_book,
+                'extension': extension_book,
+            }
 
     data_str = json.dumps(data_list)
     connection = create_connection()
@@ -678,12 +696,16 @@ def dataSeperator(data_dict: dict) -> list:
     for d in data_dict:
         j += 1
         name = d  # Name
-        code = data_dict[d]  # MD5 Link
+        code = data_dict[d]['md5']  # MD5 Link
+        info = (
+            f'Author: **{data_dict[d]["author"]}** - Publisher: **{data_dict[d]["author"]}** - Lang: **{data_dict[d]["lang"]}**\n'
+            f'Format File: **{data_dict[d]["extension"]}** - Size: **{data_dict[d]["size"]}**')
         code = f'`CODE__{code}`'
         text = (f"🔹️ Name: {name}\n\n"
-                f"⭐️ Quick code copy: {code}\n\n")
+                f"⭐️ Quick code copy: {code}\n\n"
+                f"ℹ️ {info}\n\n - * - \n\n")
         content += text
-        if j == 20:
+        if j == 13:
             result.append(content)
             content = ''
             j = 0
@@ -761,10 +783,10 @@ async def mainScrapper(md5_: str) -> dict:
             size = ''
 
         try:
-            extention = details_box.find_all('tr')[10].find_all('td')[3].text.strip()
+            extension = details_box.find_all('tr')[10].find_all('td')[3].text.strip()
         except Exception as ex:
             print('Extention Not Found: ', ex)
-            extention = ''
+            extension = ''
 
         try:
             path_img = f'downloads/{md5_}_temp.jpg'
@@ -817,7 +839,7 @@ async def mainScrapper(md5_: str) -> dict:
             'language': language,
             'pages': pages,
             'size': size,
-            'extention': extention,
+            'extension': extension,
             'series': series,
             'path_img': path_img,
             'check': True
@@ -828,7 +850,7 @@ async def mainScrapper(md5_: str) -> dict:
                           " (title, md5, download_link, authors, publisher, year, pages, language, size, extension, series, path_img) "
                           "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                           (name, md5_, link_download_json, author, publisher, year, pages, language, size,
-                           extention, series, path_img))
+                           extension, series, path_img))
         connection.commit()
         cursor_db.close()
         connection.close()
