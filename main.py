@@ -34,7 +34,21 @@ with app:
     country_time_zone = pytz.timezone('Asia/Tehran')
     # Connect To DataBase
     try:
-        database = create_connection()
+        with create_connection() as database:
+            with database.cursor(dictionary=True) as con:
+                con.execute("SELECT * from config WHERE TRUE")
+                results_h = con.fetchall()
+                for res_h in results_h:
+                    if res_h['name'] == 'timeout_delete':
+                        config.TIMEOUT_DELETE = int(res_h['value'])
+                    elif res_h['name'] == 'chanels':
+                        chanels_this = json.loads(res_h['value'])
+                        config.CHANELS = chanels_this
+                    elif res_h['name'] == 'limit_user':
+                        config.LIMIT_USERS = int(res_h['value'])
+                con.execute("SELECT * FROM users")
+                results_h = con.fetchall()
+
         # Tester Start
         # con = database.cursor(buffered=True)
         # con.execute("TRUNCATE TABLE media")
@@ -44,21 +58,6 @@ with app:
         # con.close()
         # Tester End
 
-        con = database.cursor(buffered=True, dictionary=True)
-        con.execute("SELECT * from config WHERE TRUE")
-        results_h = con.fetchall()
-        for res_h in results_h:
-            if res_h['name'] == 'timeout_delete':
-                config.TIMEOUT_DELETE = int(res_h['value'])
-            elif res_h['name'] == 'chanels':
-                chanels_this = json.loads(res_h['value'])
-                config.CHANELS = chanels_this
-            elif res_h['name'] == 'limit_user':
-                config.LIMIT_USERS = int(res_h['value'])
-        con.execute("SELECT * FROM users")
-        results_h = con.fetchall()
-        con.close()
-        database.close()
         if results_h:
             COUNT_USER_NOW = len(results_h)
             for res_h in results_h:
@@ -369,14 +368,14 @@ async def handlerTextAdmin(clientP: Client, message: types.Message):
         await message.reply('به پنل اصلی برگشتید!', reply_markup=admin_panel)
         return
     elif text == 'تعداد مشترکین | 👤':
-        connection = create_connection()
-        cursor_db = connection.cursor(buffered=True)
-        cursor_db.execute('SELECT COUNT(*) FROM users')
-        result = cursor_db.fetchone()
+
+        with create_connection() as connection:
+            with connection.cursor() as cursor_db:
+                cursor_db.execute('SELECT COUNT(*) FROM users')
+                result = cursor_db.fetchone()
+
         if not result:
             result = [0]
-        cursor_db.close()
-        connection.close()
         text = f'کل مشترکین شما: {result[0]}'
         await message.reply(text, reply_to_message_id=msg_id)
         return
@@ -430,11 +429,12 @@ async def handlerTextAdmin(clientP: Client, message: types.Message):
     elif step_admin[user_id] == 'searchDB':
         step_admin[user_id] = ''
 
-        connection = create_connection()
-        cursor_db = connection.cursor(buffered=True, dictionary=True)
-        cursor_db.execute(f"SELECT * FROM books WHERE title LIKE %s LIMIT 10",
-                          (str(f'%{text}%'),))
-        result = cursor_db.fetchall()
+        with create_connection() as connection:
+            with connection.cursor(dictionary=True) as cursor_db:
+                cursor_db.execute(f"SELECT * FROM books WHERE title LIKE %s LIMIT 10",
+                                  (str(f'%{text}%'),))
+                result = cursor_db.fetchall()
+
         content = ''
         for res in result:
             content = (f'🦋 Name: {res["title"]}\n\n'
@@ -449,8 +449,7 @@ async def handlerTextAdmin(clientP: Client, message: types.Message):
                        # f'🔖 توضیحات: {result["description"]}\n\n'
                        f'📖 File Format: {res["extension"]}\n')
             await message.reply(content, reply_to_message_id=msg_id, reply_markup=admin_panel)
-        cursor_db.close()
-        connection.close()
+
         return
     elif step_admin[user_id] == 'editSponser':
         global existing_users
@@ -462,12 +461,12 @@ async def handlerTextAdmin(clientP: Client, message: types.Message):
         step_admin[user_id] = ''
         existing_users = set()
         value = json.dumps(config.CHANELS)
-        connection = create_connection()
-        cursor_db = connection.cursor(buffered=True, dictionary=True)
-        cursor_db.execute("UPDATE config SET value = %s WHERE name = %s", (value, 'chanels'))
-        connection.commit()
-        cursor_db.close()
-        connection.close()
+
+        with create_connection() as connection:
+            with connection.cursor() as cursor_db:
+                cursor_db.execute("UPDATE config SET value = %s WHERE name = %s", (value, 'chanels'))
+                connection.commit()
+
         return
     elif step_admin[user_id] == 'editTimeout':
         try:
@@ -488,22 +487,24 @@ async def handlerTextAdmin(clientP: Client, message: types.Message):
             print(ex)
             return
         config.TIMEOUT_DELETE = timeout_del
-        connection = create_connection()
-        cursor_db = connection.cursor(buffered=True)
-        cursor_db.execute("UPDATE config SET value = %s WHERE name = %s", (timeout_del, 'timeout_delete'))
-        connection.commit()
-        cursor_db.close()
-        connection.close()
+
+        with create_connection() as connection:
+            with connection.cursor() as cursor_db:
+                cursor_db.execute("UPDATE config SET value = %s WHERE name = %s", (timeout_del, 'timeout_delete'))
+                connection.commit()
+
         await message.reply('تایم اوت کپی رایت تغییر کرد ✔️', reply_to_message_id=msg_id, reply_markup=admin_panel)
         step_admin[user_id] = ''
         return
     elif step_admin[user_id] == 'sendAll':
         this_msg = await message.reply('در حال ارسال برای کاربران هستیم ...')
         step_admin[user_id] = ''
-        connection = create_connection()
-        cursor_db = connection.cursor(buffered=True, dictionary=True)
-        cursor_db.execute(f"SELECT * FROM users")
-        result = cursor_db.fetchall()
+
+        with create_connection() as connection:
+            with connection.cursor(dictionary=True) as cursor_db:
+                cursor_db.execute(f"SELECT * FROM users")
+                result = cursor_db.fetchall()
+
         for res in result:
             try:
                 await app.send_message(res['user_id'], text)
@@ -511,8 +512,7 @@ async def handlerTextAdmin(clientP: Client, message: types.Message):
                 print(ex)
                 continue
         await message.reply('تمامی پیام ها ارسال شد!', reply_to_message_id=this_msg.id, reply_markup=admin_panel)
-        cursor_db.close()
-        connection.close()
+
         return
     elif step_admin[user_id] == 'editLimitUsers':
         try:
@@ -522,12 +522,12 @@ async def handlerTextAdmin(clientP: Client, message: types.Message):
             print(ex)
             return
         config.LIMIT_USERS = limit_user
-        connection = create_connection()
-        cursor_db = connection.cursor(buffered=True)
-        cursor_db.execute("UPDATE config SET value = %s WHERE name = %s", (limit_user, 'limit_user'))
-        connection.commit()
-        cursor_db.close()
-        connection.close()
+
+        with create_connection() as connection:
+            with connection.cursor() as cursor_db:
+                cursor_db.execute("UPDATE config SET value = %s WHERE name = %s", (limit_user, 'limit_user'))
+                connection.commit()
+
         await message.reply('تعداد حداکثر کاربران تغییر کرد ✔️', reply_to_message_id=msg_id, reply_markup=admin_panel)
         step_admin[user_id] = ''
         return
@@ -561,37 +561,36 @@ async def checkJoinMember(clientP: Client, message: types.Message, user: types.U
             return False
 
     # Load data for Admins
-    connection = create_connection()
-    cursor_db = connection.cursor(buffered=True)
-    cursor_db.execute("SELECT * FROM users WHERE user_id = %s", (int(user_id),))
-    is_new_user = True if cursor_db.fetchone() else False  # Find User
-    if not is_new_user:
-        global COUNT_USER_NOW, USER_NOW_IDS
-        cursor_db.execute("INSERT INTO users (user_id, username, first_name) VALUES (%s, %s, %s)",
-                          (int(user_id), user.username, user.first_name))
-        connection.commit()
-        cursor_db.execute("SELECT COUNT(*) FROM users")
-        all_user = int(cursor_db.fetchone()[0])
-        COUNT_USER_NOW = all_user
-        USER_NOW_IDS.add(user_id)
-        for admin_id in config.ADMINS_ID:
-            try:
-                if not user.username:
-                    username = 'Nothing (Without UserName)'
-                else:
-                    username = f'@{user.username}'
-                await app.send_message(
-                    chat_id=admin_id,
-                    text=f"↫︙New User Join The Bot .\n\n  "
-                         f"↫ id :  ❲ {user_id} ❳\n  "
-                         f"↫ username :  ❲ {username} ❳\n  "
-                         f"↫ firstname :  ❲ {user.first_name} ❳\n\n"
-                         f"↫︙members Count Now : ❲{all_user}❳"
-                )
-            except Exception as ex:
-                print(f'Admin Start Bot: {ex}')
-    cursor_db.close()
-    connection.close()
+    with create_connection() as connection:
+        with connection.cursor() as cursor_db:
+            cursor_db.execute("SELECT * FROM users WHERE user_id = %s", (int(user_id),))
+            is_new_user = True if cursor_db.fetchone() else False  # Find User
+            if not is_new_user:
+                global COUNT_USER_NOW, USER_NOW_IDS
+                cursor_db.execute("INSERT INTO users (user_id, username, first_name) VALUES (%s, %s, %s)",
+                                  (int(user_id), user.username, user.first_name))
+                connection.commit()
+                cursor_db.execute("SELECT COUNT(*) FROM users")
+                all_user = int(cursor_db.fetchone()[0])
+                COUNT_USER_NOW = all_user
+                USER_NOW_IDS.add(user_id)
+                for admin_id in config.ADMINS_ID:
+                    try:
+                        if not user.username:
+                            username = 'Nothing (Without UserName)'
+                        else:
+                            username = f'@{user.username}'
+                        await app.send_message(
+                            chat_id=admin_id,
+                            text=f"↫︙New User Join The Bot .\n\n  "
+                                 f"↫ id :  ❲ {user_id} ❳\n  "
+                                 f"↫ username :  ❲ {username} ❳\n  "
+                                 f"↫ firstname :  ❲ {user.first_name} ❳\n\n"
+                                 f"↫︙members Count Now : ❲{all_user}❳"
+                        )
+                    except Exception as ex:
+                        print(f'Admin Start Bot: {ex}')
+
     existing_users.add(user_id)
     return True  # Member In Channel
 
@@ -631,13 +630,13 @@ async def callback_query_update(clientP: Client, callback_query: "CallbackQuery"
 # Check Query In DB or Not (For Scrapping)
 def checkQuerySearch(queryInp: str, category_search='title') -> dict:  # Query For Search Movie Or Series (Return Data Str)
     query = queryInp.strip().lower()
-    connection = create_connection()
-    cursor_db = connection.cursor(buffered=True, dictionary=True)
-    cursor_db.execute("SELECT data FROM search WHERE query = %s and category = %s",
-                      (query, category_search))
-    is_query = cursor_db.fetchone()
-    cursor_db.close()
-    connection.close()
+
+    with create_connection() as connection:
+        with connection.cursor(dictionary=True) as cursor_db:
+            cursor_db.execute("SELECT data FROM search WHERE query = %s and category = %s",
+                              (query, category_search))
+            is_query = cursor_db.fetchone()
+
     if is_query:
         data = json.loads(is_query['data'])  # Fetch Data
         return data
@@ -697,13 +696,13 @@ def checkQuerySearch(queryInp: str, category_search='title') -> dict:  # Query F
             }
 
     data_str = json.dumps(data_list)
-    connection = create_connection()
-    cursor_db = connection.cursor(buffered=True)
-    cursor_db.execute("INSERT INTO search (category, query, data) VALUES (%s, %s, %s)",
-                      (category_search, query, data_str))
-    connection.commit()
-    cursor_db.close()
-    connection.close()
+
+    with create_connection() as connection:
+        with connection.cursor(dictionary=True) as cursor_db:
+            cursor_db.execute("INSERT INTO search (category, query, data) VALUES (%s, %s, %s)",
+                              (category_search, query, data_str))
+            connection.commit()
+
     return data_list
 
 
@@ -735,12 +734,12 @@ def dataSeperator(data_dict: dict) -> list:
 
 # Scrapper
 async def mainScrapper(md5_: str) -> dict:
-    connection = create_connection()
-    cursor_db = connection.cursor(buffered=True, dictionary=True)
-    cursor_db.execute("SELECT * FROM books WHERE md5=%s", (md5_,))
-    is_find: dict = cursor_db.fetchone()
-    cursor_db.close()
-    connection.close()
+
+    with create_connection() as connection:
+        with connection.cursor(dictionary=True) as cursor_db:
+            cursor_db.execute("SELECT * FROM books WHERE md5=%s", (md5_,))
+            is_find: dict = cursor_db.fetchone()
+
     if is_find:
         is_find['check'] = True
         is_find['download_link'] = json.loads(is_find['download_link'])
@@ -863,16 +862,16 @@ async def mainScrapper(md5_: str) -> dict:
             'path_img': path_img,
             'check': True
         }
-        connection = create_connection()
-        cursor_db = connection.cursor(buffered=True)
-        cursor_db.execute("INSERT INTO books"
-                          " (title, md5, download_link, authors, publisher, year, pages, language, size, extension, series, path_img) "
-                          "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                          (name, md5_, link_download_json, author, publisher, year, pages, language, size,
-                           extension, series, path_img))
-        connection.commit()
-        cursor_db.close()
-        connection.close()
+
+        with create_connection() as connection:
+            with connection.cursor() as cursor_db:
+                cursor_db.execute("INSERT INTO books"
+                                  " (title, md5, download_link, authors, publisher, year, pages, language, size, extension, series, path_img) "
+                                  "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                                  (name, md5_, link_download_json, author, publisher, year, pages, language, size,
+                                   extension, series, path_img))
+                connection.commit()
+
         return myDict
     elif response.status_code == 404:  # Not Found
         myDict['check'] = 'Not Found'

@@ -1,11 +1,12 @@
 # Create a connection DB
+from contextlib import contextmanager
+
 import mysql.connector
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.pooling import PooledMySQLConnection
 
-from typing import Union
-
 from static import config
+from typing import Union
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     pool_name="mypool",
@@ -13,14 +14,21 @@ connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     host="localhost",
     user=config.DATABASE_USERNAME,
     password=config.DATABASE_PASSWORD,
-    database=config.DATABASE_NAME
+    database=config.DATABASE_NAME,
+    autocommit=True
 )
 
 
 # Create a connection DB
+@contextmanager
 def create_connection() -> Union[PooledMySQLConnection, MySQLConnectionAbstract]:
+    connection = None
     try:
-        return connection_pool.get_connection()
+        connection = connection_pool.get_connection()
+        yield connection
     except mysql.connector.Error as err:
         print(f"Error in DB: {err}")
-        exit()
+        raise
+    finally:
+        if connection:
+            connection.close()
