@@ -102,8 +102,7 @@ users_panel = Keyboard(
 
 
 # Handler Start Bot For User
-@app.on_message(
-    filters.incoming & filters.private & filters.text & filters.command('start') & ~filters.user(config.ADMINS_ID))
+@app.on_message(filters.incoming & filters.private & filters.text & filters.command('start') & ~filters.user(config.ADMINS_ID))
 async def onStartBot(clientP: Client, message: types.Message):
     user_id = message.from_user.id
     full_command = message.command  # Embed Start
@@ -147,7 +146,8 @@ async def onStartBot(clientP: Client, message: types.Message):
         panel_chanels.append([Button(f'عضو شدم', callback_data=f'channel_member')])
         panel_chanels = InlineKeyboard(panel_chanels)
         await message.reply(
-            "اول که امیدوارم خوب باشی، برای استفاده از ربات یه وقت بذار و توی کانال های زیر عضو شو چون خیلی بهمون کمک میکنه.",
+            "اول که امیدوارم خوب باشی، برای استفاده از ربات یه وقت بذار و توی کانال های زیر عضو شو چون خیلی بهمون کمک میکنه.\n\n"
+            "First, I hope you are well, take some time to use the robot and subscribe to the following channels because it will help us a lot.",
             reply_markup=panel_chanels)
         return
 
@@ -162,7 +162,11 @@ async def onStartBot(clientP: Client, message: types.Message):
                         ' اگه روی کد کتاب کلیک کنید براتون کپی میشه'
                         ' و میتونید با ارسال اون کد برای ربات، لینک دانلود رو هم دریافت کنید.\n'
                         'همچنین میتونید لینک هارو کپی کنید و از برنامه های جانبی دانلود منیجر استفاده کنید.\n'
-                        '**فقط توجه کنید که باید اسم کتاب رو به تنهایی ارسال کنید**',
+                        '**فقط توجه کنید که باید اسم کتاب رو به تنهایی ارسال کنید**\n\n'
+                        'Usage guide: When you send us the name of a book, a list of related books will be sent to you.'
+                        '\ncopied for you and you can send the code to the robot to get the download link.\n'
+                        'You can also copy the links and use download manager side programs.\n'
+                        '**Just note that you have to send the name of the book alone**',
                         reply_to_message_id=st_msg.id)
 
 
@@ -214,7 +218,8 @@ async def handlerTextUser(clientP: Client, message: types.Message):
             panel_chanels.append([Button(f'عضو شدم', callback_data=f'channel_member')])
             panel_chanels = InlineKeyboard(panel_chanels)
             await message.reply(
-                "اول که امیدوارم خوب باشی، برای استفاده از ربات یه وقت بذار و توی کانال های زیر عضو شو چون خیلی بهمون کمک میکنه.",
+                "اول که امیدوارم خوب باشی، برای استفاده از ربات یه وقت بذار و توی کانال های زیر عضو شو چون خیلی بهمون کمک میکنه.\n\n"
+                "First, I hope you are well, take some time to use the robot and subscribe to the following channels because it will help us a lot.",
                 reply_markup=panel_chanels)
             return
     if re.search(r'[@$%^*]', text):
@@ -242,7 +247,11 @@ async def handlerTextUser(clientP: Client, message: types.Message):
                             ' اگه روی کد کتاب کلیک کنید براتون کپی میشه'
                             ' و میتونید با ارسال اون کد برای ربات، لینک دانلود رو هم دریافت کنید.\n'
                             'همچنین میتونید لینک هارو کپی کنید و از برنامه های جانبی دانلود منیجر استفاده کنید.\n'
-                            '**فقط توجه کنید که باید اسم کتاب رو به تنهایی ارسال کنید**')
+                            '**فقط توجه کنید که باید اسم کتاب رو به تنهایی ارسال کنید**\n\n'
+                            'Usage guide: When you send us the name of a book, a list of related books will be sent to you.'
+                            '\ncopied for you and you can send the code to the robot to get the download link.\n'
+                            'You can also copy the links and use download manager side programs.\n'
+                            '**Just note that you have to send the name of the book alone**')
         return
     elif text == 'ارتباط با سازنده | 🖥️':
         panel_this = InlineKeyboard(
@@ -270,7 +279,8 @@ async def handlerTextUser(clientP: Client, message: types.Message):
             panel_chanels.append([Button(f'عضو شدم', callback_data=f'channel_member')])
             panel_chanels = InlineKeyboard(panel_chanels)
             await message.reply(
-                "اول که امیدوارم خوب باشی، برای استفاده از ربات یه وقت بذار و توی کانال های زیر عضو شو چون خیلی بهمون کمک میکنه.",
+                "اول که امیدوارم خوب باشی، برای استفاده از ربات یه وقت بذار و توی کانال های زیر عضو شو چون خیلی بهمون کمک میکنه.\n\n"
+                "First, I hope you are well, take some time to use the robot and subscribe to the following channels because it will help us a lot.",
                 reply_markup=panel_chanels)
             return
         md5 = text.replace('CODE__', '').replace('code__', '')
@@ -619,7 +629,11 @@ async def callback_query_update(clientP: Client, callback_query: "CallbackQuery"
                                             ' اگه روی کد کتاب کلیک کنید براتون کپی میشه'
                                             ' و میتونید با ارسال اون کد برای ربات، لینک دانلود رو هم دریافت کنید.\n'
                                             'همچنین میتونید لینک هارو کپی کنید و از برنامه های جانبی دانلود منیجر استفاده کنید.\n'
-                                            '**فقط توجه کنید که باید اسم کتاب رو به تنهایی ارسال کنید**',
+                                            '**فقط توجه کنید که باید اسم کتاب رو به تنهایی ارسال کنید**\n\n'
+                                            'Usage guide: When you send us the name of a book, a list of related books will be sent to you.'
+                                            '\ncopied for you and you can send the code to the robot to get the download link.\n'
+                                            'You can also copy the links and use download manager side programs.\n'
+                                            '**Just note that you have to send the name of the book alone**',
                                    reply_to_message_id=st_msg.id)
         else:
             await app.send_message(from_id, 'لطفا داخل چنل ها عضو بشید و سپس عضو شدم رو کلیک کنید!')
