@@ -15,7 +15,9 @@ connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     user=config.DATABASE_USERNAME,
     password=config.DATABASE_PASSWORD,
     database=config.DATABASE_NAME,
-    autocommit=True
+    autocommit=True,
+    charset="utf8mb4",
+    collation="utf8mb4_general_ci"
 )
 
 
