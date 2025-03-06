@@ -226,19 +226,19 @@ async def handlerTextUser(clientP: Client, message: types.Message):
         await message.reply('دوست من از کارکتر های غیر مجاز تو سرچ استفاده نکن!', reply_markup=users_panel)
         return
     elif text == 'سرچ بر اساس اسم | ❤️':
-        step_user[user_id] = {'search': 'title'}
+        step_user[user_id] = {'search': 't'}
         await message.reply('تمامی مورادی که سرچ میکنید بر اساس اسم کتاب ها لیست میشه!', reply_markup=users_panel)
         return
     elif text == 'سرچ بر اساس نویسنده | 🙍‍♂️':
-        step_user[user_id] = {'search': 'author'}
+        step_user[user_id] = {'search': 'a'}
         await message.reply('تمامی مورادی که سرچ میکنید بر اساس نویسنده کتاب لیست میشه!', reply_markup=users_panel)
         return
     elif text == 'سرچ بر اساس ناشر | 🖊️':
-        step_user[user_id] = {'search': 'publisher'}
+        step_user[user_id] = {'search': 'p'}
         await message.reply('تمامی مورادی که سرچ میکنید بر اساس ناشر کتاب ها لیست میشه!', reply_markup=users_panel)
         return
     elif text == 'سرچ بر اساس ژانر | 🎨':
-        step_user[user_id] = {'search': 'series'}
+        step_user[user_id] = {'search': 's'}
         await message.reply('تمامی مورادی که سرچ میکنید بر اساس ژانر و تگ کتاب ها لیست میشه!', reply_markup=users_panel)
         return
     elif text == 'راهنمای ربات | ❓':
@@ -337,13 +337,16 @@ async def handlerTextUser(clientP: Client, message: types.Message):
             return
         this_msg1 = await message.reply("لطفا صبر کنید تا بگردیم ...", reply_to_message_id=msg_id)
         try:
-            data = checkQuerySearch(text, step_user[user_id]['search'])  # str
+            data, flag = checkQuerySearch(text, step_user[user_id]['search'])  # str
         except Exception as ex:
             print(f'Set Default Value User: {ex}')
             step_user[user_id] = {'search': 'title'}
-            data = checkQuerySearch(text, step_user[user_id]['search'])
+            data, flag = checkQuerySearch(text, step_user[user_id]['search'])
         if len(data) == 0:
-            await app.edit_message_text(chat_id, this_msg1.id, 'متاسفانه کتاب مورد نظر شما پیدا نشد!')
+            if flag:
+                await app.edit_message_text(chat_id, this_msg1.id, 'متاسفانه کتاب مورد نظر شما پیدا نشد!')
+            else:
+                await app.edit_message_text(chat_id, this_msg1.id, 'متاسفانه سرور مناسبی پیدا نکردیم :(')
             return
         textList = dataSeperator(data)  # list
         for te in textList:
@@ -653,16 +656,25 @@ def checkQuerySearch(queryInp: str, category_search='title') -> dict:  # Query F
 
     if is_query:
         data = json.loads(is_query['data'])  # Fetch Data
-        return data
+        return data, True
 
     data_list = {}  # All Book Link Title
     maximum_page_search = 50  # Dafault 100 Per Page
 
-    response = requests.get(f'{config.MAIN_SITE}search.php?req={query}&res={maximum_page_search}&column={category_search}',
-                            headers=config.HEADERS)
+    checker_here = False
+    for i in range(0, len(config.MAIN_SITE)):
+        try:
+            response = requests.get(f'{config.MAIN_SITE[0]}index.php?req={query}&res={maximum_page_search}&columns%5B%5D={category_search}', headers=config.HEADERS)
+            if 200 <= response.status_code <= 300:
+                checker_here = True
+                break
+        except Exception as ex:
+            continue
+    if checker_here != False:
+        return [], False
     html_content = response.content.decode('utf-8')
     soup = BeautifulSoup(html_content, "html.parser")
-    all_book_list = soup.find('table', class_='c').find_all('tr')
+    all_book_list = soup.find('table', {id: "tablelibgen"}).find_all('tr')
     not_found = True if len(all_book_list) < 2 else False
     if not not_found:
         ii = 0
@@ -673,12 +685,12 @@ def checkQuerySearch(queryInp: str, category_search='title') -> dict:  # Query F
 
             id_book = book.find('td').text.strip()
             author_book = book.find_all('td')[1].text.strip()
-            title_column = book.find_all('td')[2].find_all('a')
-            publisher_book = book.find_all('td')[3].text.strip()
-            year_book = book.find_all('td')[4].text.strip()
-            lang_book = book.find_all('td')[6].text.strip()
-            extension_book = book.find_all('td')[8].text.strip()
-            size_book = book.find_all('td')[7].text.strip()
+            title_column = book.find_all('td')[0].find_all('a')
+            publisher_book = book.find_all('td')[2].text.strip()
+            year_book = book.find_all('td')[3].text.strip()
+            lang_book = book.find_all('td')[4].text.strip()
+            extension_book = book.find_all('td')[7].text.strip()
+            size_book = book.find_all('td')[6].text.strip()
 
             link_book = ''
             if len(title_column) > 1:
@@ -717,7 +729,7 @@ def checkQuerySearch(queryInp: str, category_search='title') -> dict:  # Query F
                               (category_search, query, data_str))
             connection.commit()
 
-    return data_list
+    return data_list, True
 
 
 # Data To Best String (List)
@@ -759,7 +771,7 @@ async def mainScrapper(md5_: str) -> dict:
         is_find['download_link'] = json.loads(is_find['download_link'])
         return is_find  # Return Dic
 
-    link = f'{config.MAIN_SITE}book/index.php?md5={md5_}'  # For Get Link
+    link = f'{config.MAIN_SITE[0]}book/index.php?md5={md5_}'  # For Get Link
     myDict = {
         'check': False
     }
@@ -823,7 +835,7 @@ async def mainScrapper(md5_: str) -> dict:
         try:
             path_img = f'downloads/{md5_}_temp.jpg'
             img_url = str(details_box.find_all('tr')[1].find_all('td')[0].find('a').find('img').get('src').strip())
-            img_data = requests.get(f'{config.MAIN_SITE}{img_url}').content
+            img_data = requests.get(f'{config.MAIN_SITE[0]}{img_url}').content
             with open(path_img, 'wb') as handler:
                 handler.write(img_data)
         except Exception as ex:

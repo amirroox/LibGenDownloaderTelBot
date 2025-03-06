@@ -333,3 +333,4 @@ cython_debug/
 
 # Custom
 static/config.py
+.idea
