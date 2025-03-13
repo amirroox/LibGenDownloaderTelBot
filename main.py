@@ -6,6 +6,8 @@ import random
 import re
 import sys
 import time
+from typing import Any
+
 # from datetime import timedelta, datetime
 
 # from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -103,9 +105,9 @@ users_panel = Keyboard(
 
 # Handler Start Bot For User
 @app.on_message(filters.incoming & filters.private & filters.text & filters.command('start') & ~filters.user(config.ADMINS_ID))
-async def onStartBot(clientP: Client, message: types.Message):
+async def on_start_bot(client_p: Client, message: types.Message):
     user_id = message.from_user.id
-    full_command = message.command  # Embed Start
+    # full_command = message.command  # Embed Start
 
     # For Limit Request User
     current_time = time.time()  # Curent Time
@@ -135,7 +137,7 @@ async def onStartBot(clientP: Client, message: types.Message):
             '**سلام دوست من ، متاسفانه تعداد زیادی کاربر داریم و استفاده از ربات برای اعضای جدید محدوده!**')
         return
 
-    status = await checkJoinMember(clientP, message, message.from_user, config.CHANELS, config.BOT_TOKEN)
+    status = await check_join_member(client_p, message, message.from_user, config.CHANELS, config.BOT_TOKEN)
     list_heart = ['🩷', '❤️', '🧡', '💛', '💚', '🩵', '🩵', '💙', '💜', '❤️‍🔥']
     if not status:
         panel_chanels = []
@@ -172,7 +174,7 @@ async def onStartBot(clientP: Client, message: types.Message):
 
 # Handler Msg for User
 @app.on_message(filters.incoming & filters.private & filters.text & ~filters.user(config.ADMINS_ID))
-async def handlerTextUser(clientP: Client, message: types.Message):
+async def handler_text_user(client_p: Client, message: types.Message):
     text = message.text.lower()
     user_id = message.from_user.id
 
@@ -207,7 +209,7 @@ async def handlerTextUser(clientP: Client, message: types.Message):
     chat_id = message.chat.id
     msg_id = message.id
     if user_id not in existing_users:
-        status = await checkJoinMember(clientP, message, message.from_user, config.CHANELS, config.BOT_TOKEN)
+        status = await check_join_member(client_p, message, message.from_user, config.CHANELS, config.BOT_TOKEN)
         list_heart = ['🩷', '❤️', '🧡', '💛', '💚', '🩵', '🩵', '💙', '💜', '❤️‍🔥']
         if not status:
             panel_chanels = []
@@ -268,7 +270,7 @@ async def handlerTextUser(clientP: Client, message: types.Message):
         await message.reply('لطفا فقط به صورت انگلیسی سرچ کنید!', reply_to_message_id=msg_id)
         return
     if re.fullmatch(r'CODE__\w+', text, flags=re.IGNORECASE):
-        status = await checkJoinMember(clientP, message, message.from_user, config.CHANELS, config.BOT_TOKEN)
+        status = await check_join_member(client_p, message, message.from_user, config.CHANELS, config.BOT_TOKEN)
         if not status:
             list_heart = ['🩷', '❤️', '🧡', '💛', '💚', '🩵', '🩵', '💙', '💜', '❤️‍🔥']
             panel_chanels = []
@@ -285,7 +287,7 @@ async def handlerTextUser(clientP: Client, message: types.Message):
             return
         md5 = text.replace('CODE__', '').replace('code__', '')
         this_msg = await message.reply("صبر کنید تا اطلاعات رو بروز رسانی کنیم ...", reply_to_message_id=msg_id)
-        result = await mainScrapper(md5)
+        result = await main_scrapper(md5)
         if result['check'] == 'Not Found':
             await app.edit_message_text(chat_id, this_msg.id, 'موردی با این کلید پیدا نشد :(')
             return
@@ -311,7 +313,7 @@ async def handlerTextUser(clientP: Client, message: types.Message):
         except Exception as ex:
             print(ex)
             this_msg1 = await app.edit_message_text(chat_id, this_msg.id, content)
-        content = ''
+        # content = ''
         temp_list = []
         i_temp = 0
         for link in result['download_link']:
@@ -337,19 +339,19 @@ async def handlerTextUser(clientP: Client, message: types.Message):
             return
         this_msg1 = await message.reply("لطفا صبر کنید تا بگردیم ...", reply_to_message_id=msg_id)
         try:
-            data, flag = checkQuerySearch(text, step_user[user_id]['search'])  # str
+            data, flag = check_query_search(text, step_user[user_id]['search'])  # str
         except Exception as ex:
             print(f'Set Default Value User: {ex}')
             step_user[user_id] = {'search': 'title'}
-            data, flag = checkQuerySearch(text, step_user[user_id]['search'])
+            data, flag = check_query_search(text, step_user[user_id]['search'])
         if len(data) == 0:
             if flag:
                 await app.edit_message_text(chat_id, this_msg1.id, 'متاسفانه کتاب مورد نظر شما پیدا نشد!')
             else:
                 await app.edit_message_text(chat_id, this_msg1.id, 'متاسفانه سرور مناسبی پیدا نکردیم :(')
             return
-        textList = dataSeperator(data)  # list
-        for te in textList:
+        textlist = data_seperator(data)  # list
+        for te in textlist:
             await message.reply(te, reply_to_message_id=msg_id)
         await app.delete_messages(chat_id, this_msg1.id)
         return
@@ -357,14 +359,14 @@ async def handlerTextUser(clientP: Client, message: types.Message):
 
 # handler Start Bot For Admin
 @app.on_message(filters.private & filters.text & filters.regex('^/start$') & filters.user(config.ADMINS_ID))
-async def onStartBotAdmin(clientP: Client, message: types.Message):
+async def oh_start_bot_admin(client_p: Client, message: types.Message):
     await message.reply("سلام مدیر عزیز، به ربات خودت خوش اومدی :)", reply_markup=admin_panel)
     return
 
 
 # Handler Msg For Admin
 @app.on_message(filters.private & filters.text & filters.user(config.ADMINS_ID))
-async def handlerTextAdmin(clientP: Client, message: types.Message):
+async def handler_text_admin(client_p: Client, message: types.Message):
     global users_panel
     text = message.text.lower()
     user_id = message.from_user.id
@@ -549,7 +551,7 @@ async def handlerTextAdmin(clientP: Client, message: types.Message):
 
 # Need Function (Helper)
 # Check Join Members To Channel
-async def checkJoinMember(clientP: Client, message: types.Message, user: types.User, chanels: list, BOT_TOKEN: str):
+async def check_join_member(client_p: Client, message: types.Message, user: types.User, chanels: list, bot_token: str):
     """
     user : The member telegram
     channls : list channls Joined
@@ -560,7 +562,7 @@ async def checkJoinMember(clientP: Client, message: types.Message, user: types.U
     # Start Loop
     for chanel in chanels:
         try:
-            api_tel = f"https://api.telegram.org/bot{BOT_TOKEN}/getChatMember?chat_id=@{chanel}&user_id={user_id}"
+            api_tel = f"https://api.telegram.org/bot{bot_token}/getChatMember?chat_id=@{chanel}&user_id={user_id}"
             response = requests.get(api_tel).json()
             # Check Status
             if response['result']['status'] not in states:
@@ -610,14 +612,14 @@ async def checkJoinMember(clientP: Client, message: types.Message, user: types.U
 
 # Handler Query For Users
 @app.on_callback_query(~filters.user(config.ADMINS_ID))
-async def callback_query_update(clientP: Client, callback_query: "CallbackQuery"):
+async def callback_query_update(client_p: Client, callback_query: "CallbackQuery"):
     from_id = callback_query.from_user.id
     message_id = callback_query.message.id
     callback_data = callback_query.data
     text = callback_query.message.text
 
     if callback_data == 'channel_member':  # Checker Member
-        status = await checkJoinMember(clientP, callback_query.message, callback_query.from_user,
+        status = await check_join_member(client_p, callback_query.message, callback_query.from_user,
                                        config.CHANELS, config.BOT_TOKEN)
         if status:
             await app.delete_messages(from_id, message_id)
@@ -645,8 +647,9 @@ async def callback_query_update(clientP: Client, callback_query: "CallbackQuery"
 
 
 # Check Query In DB or Not (For Scrapping)
-def checkQuerySearch(queryInp: str, category_search='title') -> dict:  # Query For Search Movie Or Series (Return Data Str)
-    query = queryInp.strip().lower()
+def check_query_search(query_inp: str, category_search='title') -> tuple[list[Any], bool] | tuple[Any, bool] | tuple[
+    dict[Any, dict[str, Any]], bool]:  # Query For Search Movie Or Series (Return Data Str)
+    query = query_inp.strip().lower()
 
     with create_connection() as connection:
         with connection.cursor(dictionary=True) as cursor_db:
@@ -659,22 +662,24 @@ def checkQuerySearch(queryInp: str, category_search='title') -> dict:  # Query F
         return data, True
 
     data_list = {}  # All Book Link Title
-    maximum_page_search = 50  # Dafault 100 Per Page
+    maximum_page_search = 50  # Default 100 Per Page
 
     checker_here = False
+    response = ''
     for i in range(0, len(config.MAIN_SITE)):
         try:
-            response = requests.get(f'{config.MAIN_SITE[0]}index.php?req={query}&res={maximum_page_search}&columns%5B%5D={category_search}', headers=config.HEADERS)
+            response = requests.get(f'{config.MAIN_SITE[i]}index.php?req={query}&res={maximum_page_search}&columns%5B%5D={category_search}', headers=config.HEADERS)
             if 200 <= response.status_code <= 300:
                 checker_here = True
                 break
         except Exception as ex:
+            print(f'Next URL: {ex}')
             continue
-    if checker_here != False:
+    if not checker_here:
         return [], False
     html_content = response.content.decode('utf-8')
     soup = BeautifulSoup(html_content, "html.parser")
-    all_book_list = soup.find('table', {id: "tablelibgen"}).find_all('tr')
+    all_book_list = soup.find('table', {"id": "tablelibgen"}).find_all('tr')
     not_found = True if len(all_book_list) < 2 else False
     if not not_found:
         ii = 0
@@ -683,32 +688,18 @@ def checkQuerySearch(queryInp: str, category_search='title') -> dict:  # Query F
                 ii += 1
                 continue
 
-            id_book = book.find('td').text.strip()
+            id_book = book.find_all('td')[-3].find('a').get('href').split('=')[-1]  # https://libgen.la/file.php?id=103136677
             author_book = book.find_all('td')[1].text.strip()
-            title_column = book.find_all('td')[0].find_all('a')
+            title_book = book.find('td').find('a').text.strip()
+            if len(title_book) < 2:
+                continue
             publisher_book = book.find_all('td')[2].text.strip()
-            year_book = book.find_all('td')[3].text.strip()
+            year_book = book.find_all('td')[3].find('nobr').text.strip()
             lang_book = book.find_all('td')[4].text.strip()
-            extension_book = book.find_all('td')[7].text.strip()
-            size_book = book.find_all('td')[6].text.strip()
+            extension_book = book.find_all('td')[-2].text.strip()
+            size_book = book.find_all('td')[-3].find('a').text.strip()
+            link_book = book.find_all('td')[-3].find('a').get('href').strip()
 
-            link_book = ''
-            if len(title_column) > 1:
-                row = -1
-            else:
-                row = 0
-
-            jj = False
-            for font in title_column[row].find_all('font'):
-                if len(title_column[row].find_all('font')) < 2:
-                    font.extract()
-                    break
-                if not jj:
-                    jj = True
-                    continue
-                font.extract()
-            title_book = title_column[row].text.strip()
-            link_book = re.findall(r'\?md5=(\w+)$', title_column[row].get('href'))[0]  # MD5 FILE LINK
 
             data_list[title_book] = {
                 'id': id_book,
@@ -733,7 +724,7 @@ def checkQuerySearch(queryInp: str, category_search='title') -> dict:  # Query F
 
 
 # Data To Best String (List)
-def dataSeperator(data_dict: dict) -> list:
+def data_seperator(data_dict: dict) -> list:
     content = '🔸️ نتایج جستجو بر اساس سرچ انگلیسی' + '\n\n'
     result = []
     j = 0
@@ -759,7 +750,7 @@ def dataSeperator(data_dict: dict) -> list:
 
 
 # Scrapper
-async def mainScrapper(md5_: str) -> dict:
+async def main_scrapper(md5_: str) -> dict:
 
     with create_connection() as connection:
         with connection.cursor(dictionary=True) as cursor_db:
@@ -771,147 +762,153 @@ async def mainScrapper(md5_: str) -> dict:
         is_find['download_link'] = json.loads(is_find['download_link'])
         return is_find  # Return Dic
 
-    link = f'{config.MAIN_SITE[0]}book/index.php?md5={md5_}'  # For Get Link
-    myDict = {
+    my_dict = {
         'check': False
     }
-    response = requests.get(link, headers=config.HEADERS)
-    if response.status_code == requests.codes.ok:
-        html_content = response.content.decode('utf-8')
-        soup = BeautifulSoup(html_content, "html.parser")
-        for s in soup.select('table.hashes'):
-            s.extract()
-        details_box = soup.select_one('body > table')
-        name = details_box.find_all('tr')[1].find_all('td')[2].find('a').text.strip()
-
+    for ii in range(0, len(config.MAIN_SITE)):
         try:
-            author = details_box.find_all('tr')[2].find_all('td')[1].text.strip()
-        except Exception as ex:
-            print('Author Not Found: ', ex)
-            author = ''
+            link = f'{config.MAIN_SITE[ii]}{md5_}'  # For Get Link
+            response = requests.get(link, headers=config.HEADERS)
+            if 200 <= response.status_code <= 300:
+                html_content = response.content.decode('utf-8')
+                soup = BeautifulSoup(html_content, "html.parser")
+                for s in soup.select('table.hashes'):
+                    s.extract()
+                details_box = soup.select_one('body > table')
+                name = details_box.find_all('tr')[1].find_all('td')[2].find('a').text.strip()
 
-        try:
-            series = details_box.find_all('tr')[3].find_all('td')[1].text.strip()
-        except Exception as ex:
-            print('Series Not Found: ', ex)
-            series = ''
-
-        try:
-            publisher = details_box.find_all('tr')[4].find_all('td')[1].text.strip()
-        except Exception as ex:
-            print('Publisher Not Found: ', ex)
-            publisher = ''
-
-        try:
-            year = details_box.find_all('tr')[5].find_all('td')[1].text.strip()
-        except Exception as ex:
-            print('Year Not Found: ', ex)
-            year = ''
-
-        try:
-            language = details_box.find_all('tr')[6].find_all('td')[1].text.strip()
-        except Exception as ex:
-            print('Lang Not Found: ', ex)
-            language = ''
-
-        try:
-            pages = details_box.find_all('tr')[6].find_all('td')[3].text.strip()
-        except Exception as ex:
-            print('Pages Not Found: ', ex)
-            pages = ''
-
-        try:
-            size = details_box.find_all('tr')[10].find_all('td')[1].text.strip()
-        except Exception as ex:
-            print('Size Not Found: ', ex)
-            size = ''
-
-        try:
-            extension = details_box.find_all('tr')[10].find_all('td')[3].text.strip()
-        except Exception as ex:
-            print('Extention Not Found: ', ex)
-            extension = ''
-
-        try:
-            path_img = f'downloads/{md5_}_temp.jpg'
-            img_url = str(details_box.find_all('tr')[1].find_all('td')[0].find('a').find('img').get('src').strip())
-            img_data = requests.get(f'{config.MAIN_SITE[0]}{img_url}').content
-            with open(path_img, 'wb') as handler:
-                handler.write(img_data)
-        except Exception as ex:
-            print('Image Not Found: ', ex)
-            path_img = ''
-
-        try:
-            links_download_str = details_box.find_all('tr')[1].find_all('td')[0].find('a').get('href').strip()
-        except Exception as ex:
-            print('Links Download Not Found: ', ex)
-            for admin_id in config.ADMINS_ID:
                 try:
-                    await app.send_message(chat_id=admin_id, text=f"Error Site\n"
-                                                                  f"Name MDF: {md5_}\n"
-                                                                  f"Status: Failed!")
+                    author = details_box.find_all('tr')[2].find_all('td')[1].text.strip()
                 except Exception as ex:
-                    print(f'Admin Start Bot: {ex}')
-            myDict['check'] = 'Error'
-            return myDict
+                    print('Author Not Found: ', ex)
+                    author = ''
 
-        link_download = []
-        response = requests.get(links_download_str, headers=config.HEADERS)
-        if response.status_code == requests.codes.ok:
-            html_content = response.content.decode('utf-8')
-            soup = BeautifulSoup(html_content, "html.parser")
-            box_download = soup.select_one('div#download')
-            link_download.append(box_download.find('h2').find('a').get('href'))  # MAIN LINK
-            for i in range(0, 3):
                 try:
-                    link_download.append(box_download.find('ul').find_all('li')[i].find('a').get('href'))
+                    series = details_box.find_all('tr')[3].find_all('td')[1].text.strip()
                 except Exception as ex:
-                    print(f'{ex}')
-        else:
-            myDict['check'] = 'Error'
-            return myDict
+                    print('Series Not Found: ', ex)
+                    series = ''
 
-        link_download_json = json.dumps(link_download)
-        myDict = {
-            'title': name,
-            'md5': md5_,
-            'download_link': link_download,
-            'authors': author,
-            'year': year,
-            'publisher': publisher,
-            'language': language,
-            'pages': pages,
-            'size': size,
-            'extension': extension,
-            'series': series,
-            'path_img': path_img,
-            'check': True
-        }
+                try:
+                    publisher = details_box.find_all('tr')[4].find_all('td')[1].text.strip()
+                except Exception as ex:
+                    print('Publisher Not Found: ', ex)
+                    publisher = ''
 
-        with create_connection() as connection:
-            with connection.cursor() as cursor_db:
-                cursor_db.execute("INSERT INTO books"
-                                  " (title, md5, download_link, authors, publisher, year, pages, language, size, extension, series, path_img) "
-                                  "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                                  (name, md5_, link_download_json, author, publisher, year, pages, language, size,
-                                   extension, series, path_img))
-                connection.commit()
+                try:
+                    year = details_box.find_all('tr')[5].find_all('td')[1].text.strip()
+                except Exception as ex:
+                    print('Year Not Found: ', ex)
+                    year = ''
 
-        return myDict
-    elif response.status_code == 404:  # Not Found
-        myDict['check'] = 'Not Found'
-        return myDict
-    else:
-        for admin_id in config.ADMINS_ID:
-            try:
-                await app.send_message(chat_id=admin_id, text=f"Error Site\n"
-                                                              f"Name MDF: {md5_}\n"
-                                                              f"Status: Failed!")
-            except Exception as ex:
-                print(f'Admin Start Bot: {ex}')
-        myDict['check'] = 'Error'
-        return myDict
+                try:
+                    language = details_box.find_all('tr')[6].find_all('td')[1].text.strip()
+                except Exception as ex:
+                    print('Lang Not Found: ', ex)
+                    language = ''
+
+                try:
+                    pages = details_box.find_all('tr')[6].find_all('td')[3].text.strip()
+                except Exception as ex:
+                    print('Pages Not Found: ', ex)
+                    pages = ''
+
+                try:
+                    size = details_box.find_all('tr')[10].find_all('td')[1].text.strip()
+                except Exception as ex:
+                    print('Size Not Found: ', ex)
+                    size = ''
+
+                try:
+                    extension = details_box.find_all('tr')[10].find_all('td')[3].text.strip()
+                except Exception as ex:
+                    print('Extention Not Found: ', ex)
+                    extension = ''
+
+                try:
+                    path_img = f'downloads/{md5_}_temp.jpg'
+                    img_url = str(
+                        details_box.find_all('tr')[1].find_all('td')[0].find('a').find('img').get('src').strip())
+                    img_data = requests.get(f'{config.MAIN_SITE[0]}{img_url}').content
+                    with open(path_img, 'wb') as handler:
+                        handler.write(img_data)
+                except Exception as ex:
+                    print('Image Not Found: ', ex)
+                    path_img = ''
+
+                try:
+                    links_download_str = details_box.find_all('tr')[1].find_all('td')[0].find('a').get('href').strip()
+                except Exception as ex:
+                    print('Links Download Not Found: ', ex)
+                    for admin_id in config.ADMINS_ID:
+                        try:
+                            await app.send_message(chat_id=admin_id, text=f"Error Site\n"
+                                                                          f"Name MDF: {md5_}\n"
+                                                                          f"Status: Failed!")
+                        except Exception as ex:
+                            print(f'Admin Start Bot: {ex}')
+                    my_dict['check'] = 'Error'
+                    return my_dict
+
+                link_download = []
+                response = requests.get(links_download_str, headers=config.HEADERS)
+                if response.status_code == requests.codes.ok:
+                    html_content = response.content.decode('utf-8')
+                    soup = BeautifulSoup(html_content, "html.parser")
+                    box_download = soup.select_one('div#download')
+                    link_download.append(box_download.find('h2').find('a').get('href'))  # MAIN LINK
+                    for i in range(0, 3):
+                        try:
+                            link_download.append(box_download.find('ul').find_all('li')[i].find('a').get('href'))
+                        except Exception as ex:
+                            print(f'{ex}')
+                else:
+                    my_dict['check'] = 'Error'
+                    return my_dict
+
+                link_download_json = json.dumps(link_download)
+                my_dict = {
+                    'title': name,
+                    'md5': md5_,
+                    'download_link': link_download,
+                    'authors': author,
+                    'year': year,
+                    'publisher': publisher,
+                    'language': language,
+                    'pages': pages,
+                    'size': size,
+                    'extension': extension,
+                    'series': series,
+                    'path_img': path_img,
+                    'check': True
+                }
+
+                with create_connection() as connection:
+                    with connection.cursor() as cursor_db:
+                        cursor_db.execute("INSERT INTO books"
+                                          " (title, md5, download_link, authors, publisher, year, pages, language, size, extension, series, path_img) "
+                                          "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                                          (name, md5_, link_download_json, author, publisher, year, pages, language,
+                                           size,
+                                           extension, series, path_img))
+                        connection.commit()
+
+                return my_dict
+        except Exception as exx:
+            print(f'Next URL: {exx}')
+            continue
+
+    for admin_id in config.ADMINS_ID:
+        try:
+            await app.send_message(chat_id=admin_id, text=f"Error Site\n"
+                                                          f"Name MDF: {md5_}\n"
+                                                          f"Status: Failed!")
+        except Exception as ex:
+            print(f'Admin Start Bot: {ex}')
+
+    my_dict['check'] = 'Error'
+    return my_dict
+
 
 
 # Convert Farsi To Fingilsh (EN)
