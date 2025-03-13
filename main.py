@@ -6,7 +6,6 @@ import random
 import re
 import sys
 import time
-from typing import Any
 
 # from datetime import timedelta, datetime
 
@@ -228,19 +227,19 @@ async def handler_text_user(client_p: Client, message: types.Message):
         await message.reply('دوست من از کارکتر های غیر مجاز تو سرچ استفاده نکن!', reply_markup=users_panel)
         return
     elif text == 'سرچ بر اساس اسم | ❤️':
-        step_user[user_id] = {'search': 't'}
+        step_user[user_id] = {'search': 'title'}
         await message.reply('تمامی مورادی که سرچ میکنید بر اساس اسم کتاب ها لیست میشه!', reply_markup=users_panel)
         return
     elif text == 'سرچ بر اساس نویسنده | 🙍‍♂️':
-        step_user[user_id] = {'search': 'a'}
+        step_user[user_id] = {'search': 'author'}
         await message.reply('تمامی مورادی که سرچ میکنید بر اساس نویسنده کتاب لیست میشه!', reply_markup=users_panel)
         return
     elif text == 'سرچ بر اساس ناشر | 🖊️':
-        step_user[user_id] = {'search': 'p'}
+        step_user[user_id] = {'search': 'publisher'}
         await message.reply('تمامی مورادی که سرچ میکنید بر اساس ناشر کتاب ها لیست میشه!', reply_markup=users_panel)
         return
     elif text == 'سرچ بر اساس ژانر | 🎨':
-        step_user[user_id] = {'search': 's'}
+        step_user[user_id] = {'search': 'series'}
         await message.reply('تمامی مورادی که سرچ میکنید بر اساس ژانر و تگ کتاب ها لیست میشه!', reply_markup=users_panel)
         return
     elif text == 'راهنمای ربات | ❓':
@@ -350,8 +349,8 @@ async def handler_text_user(client_p: Client, message: types.Message):
             else:
                 await app.edit_message_text(chat_id, this_msg1.id, 'متاسفانه سرور مناسبی پیدا نکردیم :(')
             return
-        textlist = data_seperator(data)  # list
-        for te in textlist:
+        text_list = data_seperator(data)  # list
+        for te in text_list:
             await message.reply(te, reply_to_message_id=msg_id)
         await app.delete_messages(chat_id, this_msg1.id)
         return
@@ -359,7 +358,7 @@ async def handler_text_user(client_p: Client, message: types.Message):
 
 # handler Start Bot For Admin
 @app.on_message(filters.private & filters.text & filters.regex('^/start$') & filters.user(config.ADMINS_ID))
-async def oh_start_bot_admin(client_p: Client, message: types.Message):
+async def on_start_bot_admin(client_p: Client, message: types.Message):
     await message.reply("سلام مدیر عزیز، به ربات خودت خوش اومدی :)", reply_markup=admin_panel)
     return
 
@@ -370,7 +369,7 @@ async def handler_text_admin(client_p: Client, message: types.Message):
     global users_panel
     text = message.text.lower()
     user_id = message.from_user.id
-    chat_id = message.chat.id
+    # chat_id = message.chat.id
     msg_id = message.id
     if text == 'خاموش کردن ربات | 🔌':
         await message.reply('ربات خاموش شد: برای شروع مجدد از هاست یا سرور اقدام فرمایید.')
@@ -450,7 +449,7 @@ async def handler_text_admin(client_p: Client, message: types.Message):
                                   (str(f'%{text}%'),))
                 result = cursor_db.fetchall()
 
-        content = ''
+        # content = ''
         for res in result:
             content = (f'🦋 Name: {res["title"]}\n\n'
                        f'📚 Code: {res["md5"]}\n\n'
@@ -616,7 +615,7 @@ async def callback_query_update(client_p: Client, callback_query: "CallbackQuery
     from_id = callback_query.from_user.id
     message_id = callback_query.message.id
     callback_data = callback_query.data
-    text = callback_query.message.text
+    # text = callback_query.message.text
 
     if callback_data == 'channel_member':  # Checker Member
         status = await check_join_member(client_p, callback_query.message, callback_query.from_user,
@@ -647,8 +646,7 @@ async def callback_query_update(client_p: Client, callback_query: "CallbackQuery
 
 
 # Check Query In DB or Not (For Scrapping)
-def check_query_search(query_inp: str, category_search='title') -> tuple[list[Any], bool] | tuple[Any, bool] | tuple[
-    dict[Any, dict[str, Any]], bool]:  # Query For Search Movie Or Series (Return Data Str)
+def check_query_search(query_inp: str, category_search='title'):  # Query For Search Movie Or Series (Return Data Str)
     query = query_inp.strip().lower()
 
     with create_connection() as connection:
@@ -662,13 +660,15 @@ def check_query_search(query_inp: str, category_search='title') -> tuple[list[An
         return data, True
 
     data_list = {}  # All Book Link Title
-    maximum_page_search = 50  # Default 100 Per Page
+    maximum_page_search = 50  # Dafault 100 Per Page
 
     checker_here = False
     response = ''
-    for i in range(0, len(config.MAIN_SITE)):
+    for main_site_here in config.MAIN_SITE:
         try:
-            response = requests.get(f'{config.MAIN_SITE[i]}index.php?req={query}&res={maximum_page_search}&columns%5B%5D={category_search}', headers=config.HEADERS)
+            response = requests.get(
+                f'{main_site_here}index.php?req={query}&res={maximum_page_search}&columns%5B%5D={category_search}',
+                headers=config.HEADERS)
             if 200 <= response.status_code <= 300:
                 checker_here = True
                 break
@@ -677,9 +677,10 @@ def check_query_search(query_inp: str, category_search='title') -> tuple[list[An
             continue
     if not checker_here:
         return [], False
+
     html_content = response.content.decode('utf-8')
     soup = BeautifulSoup(html_content, "html.parser")
-    all_book_list = soup.find('table', {"id": "tablelibgen"}).find_all('tr')
+    all_book_list = soup.find('table', class_='c').find_all('tr')
     not_found = True if len(all_book_list) < 2 else False
     if not not_found:
         ii = 0
@@ -688,18 +689,32 @@ def check_query_search(query_inp: str, category_search='title') -> tuple[list[An
                 ii += 1
                 continue
 
-            id_book = book.find_all('td')[-3].find('a').get('href').split('=')[-1]  # https://libgen.la/file.php?id=103136677
+            id_book = book.find('td').text.strip()
             author_book = book.find_all('td')[1].text.strip()
-            title_book = book.find('td').find('a').text.strip()
-            if len(title_book) < 2:
-                continue
-            publisher_book = book.find_all('td')[2].text.strip()
-            year_book = book.find_all('td')[3].find('nobr').text.strip()
-            lang_book = book.find_all('td')[4].text.strip()
-            extension_book = book.find_all('td')[-2].text.strip()
-            size_book = book.find_all('td')[-3].find('a').text.strip()
-            link_book = book.find_all('td')[-3].find('a').get('href').strip()
+            title_column = book.find_all('td')[2].find_all('a')
+            publisher_book = book.find_all('td')[3].text.strip()
+            year_book = book.find_all('td')[4].text.strip()
+            lang_book = book.find_all('td')[6].text.strip()
+            extension_book = book.find_all('td')[8].text.strip()
+            size_book = book.find_all('td')[7].text.strip()
 
+            # link_book = ''
+            if len(title_column) > 1:
+                row = -1
+            else:
+                row = 0
+
+            jj = False
+            for font in title_column[row].find_all('font'):
+                if len(title_column[row].find_all('font')) < 2:
+                    font.extract()
+                    break
+                if not jj:
+                    jj = True
+                    continue
+                font.extract()
+            title_book = title_column[row].text.strip()
+            link_book = re.findall(r'\?md5=(\w+)$', title_column[row].get('href'))[0]  # MD5 FILE LINK
 
             data_list[title_book] = {
                 'id': id_book,
@@ -762,153 +777,151 @@ async def main_scrapper(md5_: str) -> dict:
         is_find['download_link'] = json.loads(is_find['download_link'])
         return is_find  # Return Dic
 
+    response = ''
+    for main_site in config.MAIN_SITE:
+        link = f'{main_site}book/index.php?md5={md5_}'  # For Get Link
+        response = requests.get(link, headers=config.HEADERS)
+        if 200 <= response.status_code <= 300:
+            break
     my_dict = {
         'check': False
     }
-    for ii in range(0, len(config.MAIN_SITE)):
+    if response.status_code == requests.codes.ok:
+        html_content = response.content.decode('utf-8')
+        soup = BeautifulSoup(html_content, "html.parser")
+        for s in soup.select('table.hashes'):
+            s.extract()
+        details_box = soup.select_one('body > table')
+        name = details_box.find_all('tr')[1].find_all('td')[2].find('a').text.strip()
+
         try:
-            link = f'{config.MAIN_SITE[ii]}{md5_}'  # For Get Link
-            response = requests.get(link, headers=config.HEADERS)
-            if 200 <= response.status_code <= 300:
-                html_content = response.content.decode('utf-8')
-                soup = BeautifulSoup(html_content, "html.parser")
-                for s in soup.select('table.hashes'):
-                    s.extract()
-                details_box = soup.select_one('body > table')
-                name = details_box.find_all('tr')[1].find_all('td')[2].find('a').text.strip()
-
-                try:
-                    author = details_box.find_all('tr')[2].find_all('td')[1].text.strip()
-                except Exception as ex:
-                    print('Author Not Found: ', ex)
-                    author = ''
-
-                try:
-                    series = details_box.find_all('tr')[3].find_all('td')[1].text.strip()
-                except Exception as ex:
-                    print('Series Not Found: ', ex)
-                    series = ''
-
-                try:
-                    publisher = details_box.find_all('tr')[4].find_all('td')[1].text.strip()
-                except Exception as ex:
-                    print('Publisher Not Found: ', ex)
-                    publisher = ''
-
-                try:
-                    year = details_box.find_all('tr')[5].find_all('td')[1].text.strip()
-                except Exception as ex:
-                    print('Year Not Found: ', ex)
-                    year = ''
-
-                try:
-                    language = details_box.find_all('tr')[6].find_all('td')[1].text.strip()
-                except Exception as ex:
-                    print('Lang Not Found: ', ex)
-                    language = ''
-
-                try:
-                    pages = details_box.find_all('tr')[6].find_all('td')[3].text.strip()
-                except Exception as ex:
-                    print('Pages Not Found: ', ex)
-                    pages = ''
-
-                try:
-                    size = details_box.find_all('tr')[10].find_all('td')[1].text.strip()
-                except Exception as ex:
-                    print('Size Not Found: ', ex)
-                    size = ''
-
-                try:
-                    extension = details_box.find_all('tr')[10].find_all('td')[3].text.strip()
-                except Exception as ex:
-                    print('Extention Not Found: ', ex)
-                    extension = ''
-
-                try:
-                    path_img = f'downloads/{md5_}_temp.jpg'
-                    img_url = str(
-                        details_box.find_all('tr')[1].find_all('td')[0].find('a').find('img').get('src').strip())
-                    img_data = requests.get(f'{config.MAIN_SITE[0]}{img_url}').content
-                    with open(path_img, 'wb') as handler:
-                        handler.write(img_data)
-                except Exception as ex:
-                    print('Image Not Found: ', ex)
-                    path_img = ''
-
-                try:
-                    links_download_str = details_box.find_all('tr')[1].find_all('td')[0].find('a').get('href').strip()
-                except Exception as ex:
-                    print('Links Download Not Found: ', ex)
-                    for admin_id in config.ADMINS_ID:
-                        try:
-                            await app.send_message(chat_id=admin_id, text=f"Error Site\n"
-                                                                          f"Name MDF: {md5_}\n"
-                                                                          f"Status: Failed!")
-                        except Exception as ex:
-                            print(f'Admin Start Bot: {ex}')
-                    my_dict['check'] = 'Error'
-                    return my_dict
-
-                link_download = []
-                response = requests.get(links_download_str, headers=config.HEADERS)
-                if response.status_code == requests.codes.ok:
-                    html_content = response.content.decode('utf-8')
-                    soup = BeautifulSoup(html_content, "html.parser")
-                    box_download = soup.select_one('div#download')
-                    link_download.append(box_download.find('h2').find('a').get('href'))  # MAIN LINK
-                    for i in range(0, 3):
-                        try:
-                            link_download.append(box_download.find('ul').find_all('li')[i].find('a').get('href'))
-                        except Exception as ex:
-                            print(f'{ex}')
-                else:
-                    my_dict['check'] = 'Error'
-                    return my_dict
-
-                link_download_json = json.dumps(link_download)
-                my_dict = {
-                    'title': name,
-                    'md5': md5_,
-                    'download_link': link_download,
-                    'authors': author,
-                    'year': year,
-                    'publisher': publisher,
-                    'language': language,
-                    'pages': pages,
-                    'size': size,
-                    'extension': extension,
-                    'series': series,
-                    'path_img': path_img,
-                    'check': True
-                }
-
-                with create_connection() as connection:
-                    with connection.cursor() as cursor_db:
-                        cursor_db.execute("INSERT INTO books"
-                                          " (title, md5, download_link, authors, publisher, year, pages, language, size, extension, series, path_img) "
-                                          "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                                          (name, md5_, link_download_json, author, publisher, year, pages, language,
-                                           size,
-                                           extension, series, path_img))
-                        connection.commit()
-
-                return my_dict
-        except Exception as exx:
-            print(f'Next URL: {exx}')
-            continue
-
-    for admin_id in config.ADMINS_ID:
-        try:
-            await app.send_message(chat_id=admin_id, text=f"Error Site\n"
-                                                          f"Name MDF: {md5_}\n"
-                                                          f"Status: Failed!")
+            author = details_box.find_all('tr')[2].find_all('td')[1].text.strip()
         except Exception as ex:
-            print(f'Admin Start Bot: {ex}')
+            print('Author Not Found: ', ex)
+            author = ''
 
-    my_dict['check'] = 'Error'
-    return my_dict
+        try:
+            series = details_box.find_all('tr')[3].find_all('td')[1].text.strip()
+        except Exception as ex:
+            print('Series Not Found: ', ex)
+            series = ''
 
+        try:
+            publisher = details_box.find_all('tr')[4].find_all('td')[1].text.strip()
+        except Exception as ex:
+            print('Publisher Not Found: ', ex)
+            publisher = ''
+
+        try:
+            year = details_box.find_all('tr')[5].find_all('td')[1].text.strip()
+        except Exception as ex:
+            print('Year Not Found: ', ex)
+            year = ''
+
+        try:
+            language = details_box.find_all('tr')[6].find_all('td')[1].text.strip()
+        except Exception as ex:
+            print('Lang Not Found: ', ex)
+            language = ''
+
+        try:
+            pages = details_box.find_all('tr')[6].find_all('td')[3].text.strip()
+        except Exception as ex:
+            print('Pages Not Found: ', ex)
+            pages = ''
+
+        try:
+            size = details_box.find_all('tr')[10].find_all('td')[1].text.strip()
+        except Exception as ex:
+            print('Size Not Found: ', ex)
+            size = ''
+
+        try:
+            extension = details_box.find_all('tr')[10].find_all('td')[3].text.strip()
+        except Exception as ex:
+            print('Extention Not Found: ', ex)
+            extension = ''
+
+        try:
+            path_img = f'downloads/{md5_}_temp.jpg'
+            img_url = str(details_box.find_all('tr')[1].find_all('td')[0].find('a').find('img').get('src').strip())
+            img_data = requests.get(f'{config.MAIN_SITE}{img_url}').content
+            with open(path_img, 'wb') as handler:
+                handler.write(img_data)
+        except Exception as ex:
+            print('Image Not Found: ', ex)
+            path_img = ''
+
+        try:
+            links_download_str = details_box.find_all('tr')[1].find_all('td')[0].find('a').get('href').strip()
+        except Exception as ex:
+            print('Links Download Not Found: ', ex)
+            for admin_id in config.ADMINS_ID:
+                try:
+                    await app.send_message(chat_id=admin_id, text=f"Error Site\n"
+                                                                  f"Name MDF: {md5_}\n"
+                                                                  f"Status: Failed!")
+                except Exception as ex:
+                    print(f'Admin Start Bot: {ex}')
+            my_dict['check'] = 'Error'
+            return my_dict
+
+        link_download = []
+        response = requests.get(links_download_str, headers=config.HEADERS)
+        if response.status_code == requests.codes.ok:
+            html_content = response.content.decode('utf-8')
+            soup = BeautifulSoup(html_content, "html.parser")
+            box_download = soup.select_one('div#download')
+            link_download.append(box_download.find('h2').find('a').get('href'))  # MAIN LINK
+            for i in range(0, 3):
+                try:
+                    link_download.append(box_download.find('ul').find_all('li')[i].find('a').get('href'))
+                except Exception as ex:
+                    print(f'{ex}')
+        else:
+            my_dict['check'] = 'Error'
+            return my_dict
+
+        link_download_json = json.dumps(link_download)
+        my_dict = {
+            'title': name,
+            'md5': md5_,
+            'download_link': link_download,
+            'authors': author,
+            'year': year,
+            'publisher': publisher,
+            'language': language,
+            'pages': pages,
+            'size': size,
+            'extension': extension,
+            'series': series,
+            'path_img': path_img,
+            'check': True
+        }
+
+        with create_connection() as connection:
+            with connection.cursor() as cursor_db:
+                cursor_db.execute("INSERT INTO books"
+                                  " (title, md5, download_link, authors, publisher, year, pages, language, size, extension, series, path_img) "
+                                  "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                                  (name, md5_, link_download_json, author, publisher, year, pages, language, size,
+                                   extension, series, path_img))
+                connection.commit()
+
+        return my_dict
+    elif response.status_code == 404:  # Not Found
+        my_dict['check'] = 'Not Found'
+        return my_dict
+    else:
+        for admin_id in config.ADMINS_ID:
+            try:
+                await app.send_message(chat_id=admin_id, text=f"Error Site\n"
+                                                              f"Name MDF: {md5_}\n"
+                                                              f"Status: Failed!")
+            except Exception as ex:
+                print(f'Admin Start Bot: {ex}')
+        my_dict['check'] = 'Error'
+        return my_dict
 
 
 # Convert Farsi To Fingilsh (EN)
