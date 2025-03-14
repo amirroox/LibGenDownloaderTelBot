@@ -11,6 +11,7 @@ import time
 
 # from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pyrogram import Client, enums, filters, types
+from pyrogram.errors import FloodWait
 from pyrogram.types import (ReplyKeyboardMarkup as Keyboard, InlineKeyboardMarkup as InlineKeyboard,
                             InlineKeyboardButton as Button, CallbackQuery)
 
@@ -78,7 +79,6 @@ admin_panel = Keyboard(
         ['تنظیم کانال اسپانسری | 💵'],
         ['تنظیم تایم اوت کپی رایت | ⏳'],
         ['اطلاع رسانی کلی | 🔔', 'تنظیم تایم اوت | ⏰'],
-        ['تنظیم تعداد کاربران | 🙋🏻‍♂️']
     ]
 )
 # Back Panel
@@ -98,6 +98,7 @@ users_panel = Keyboard(
         ['سرچ بر اساس اسم | ❤️', 'سرچ بر اساس نویسنده | 🙍‍♂️'],
         ['سرچ بر اساس ناشر | 🖊️', 'سرچ بر اساس ژانر | 🎨'],
         ['راهنمای ربات | ❓', 'ارتباط با سازنده | 🖥️'],
+        # ['تغییر زبان | Change Language']
     ]
 )
 
@@ -257,13 +258,17 @@ async def handler_text_user(client_p: Client, message: types.Message):
     elif text == 'ارتباط با سازنده | 🖥️':
         panel_this = InlineKeyboard(
             [
-                [Button('ارتباط', url=f't.me/{config.MAIN_ADMIN}')]
-                # [Button('پرداخت', url=f'{config.MAIN_DOMAIN}/request/{user_id}')]
+                [Button('ارتباط', url=f't.me/{config.MAIN_ADMIN}')],
+                [Button('حمایت مالی', url=config.ADMINS_LINK)]
             ]
         )
         await message.reply("برای ارتباط با سازنده کلیک کنید.",
                             reply_to_message_id=msg_id,
                             reply_markup=panel_this)
+        return
+    elif text == 'تغییر زبان | Change Language':  # TODO
+        step_user[user_id] = {'lang': 'fa'}
+        await message.reply('تمامی مورادی که سرچ میکنید بر اساس ناشر کتاب ها لیست میشه!', reply_markup=users_panel)
         return
     if not text.isascii():  # Check English Search
         await message.reply('لطفا فقط به صورت انگلیسی سرچ کنید!', reply_to_message_id=msg_id)
@@ -369,7 +374,7 @@ async def handler_text_admin(client_p: Client, message: types.Message):
     global users_panel
     text = message.text.lower()
     user_id = message.from_user.id
-    # chat_id = message.chat.id
+    chat_id = message.chat.id
     msg_id = message.id
     if text == 'خاموش کردن ربات | 🔌':
         await message.reply('ربات خاموش شد: برای شروع مجدد از هاست یا سرور اقدام فرمایید.')
@@ -382,16 +387,56 @@ async def handler_text_admin(client_p: Client, message: types.Message):
         await message.reply('به پنل اصلی برگشتید!', reply_markup=admin_panel)
         return
     elif text == 'تعداد مشترکین | 👤':
-
+        this_msg = await message.reply('برررسی یوزرهای واقعی کمی زمان بر است ، لطفا چند دقیقه منتظر بمانید',
+                                       reply_to_message_id=msg_id)
+        valid_users = 0  # (int)
+        invalid_user = 0  # (int)
+        # result = 0  # Last User (list)
         with create_connection() as connection:
             with connection.cursor() as cursor_db:
                 cursor_db.execute('SELECT COUNT(*) FROM users')
                 result = cursor_db.fetchone()
-
         if not result:
             result = [0]
-        text = f'کل مشترکین شما: {result[0]}'
-        await message.reply(text, reply_to_message_id=msg_id)
+        else:
+            with create_connection() as connection:
+                with connection.cursor(dictionary=True) as cursor_db:
+                    cursor_db.execute(f"SELECT * FROM users")
+                    all_user_idis = cursor_db.fetchall()
+            for this_user in all_user_idis:
+                try:
+                    # await app.get_users(this_user['user_id'])
+                    await app.send_chat_action(this_user['user_id'], enums.ChatAction.TYPING)
+                    valid_users += 1
+
+                except FloodWait as e:
+                    await asyncio.sleep(e.value)
+                    try:
+                        await app.send_chat_action(this_user['user_id'], enums.ChatAction.TYPING)
+                        valid_users += 1
+                    except Exception as ex:
+                        print(ex)
+                        invalid_user += 1
+                        with create_connection() as connection:
+                            with connection.cursor(dictionary=True) as cursor_db:
+                                cursor_db.execute(f"DELETE FROM users WHERE user_id = %s", (this_user['user_id'],))
+                            connection.commit()
+                    continue
+
+                except Exception as ex:
+                    print(ex)
+                    invalid_user += 1
+                    with create_connection() as connection:
+                        with connection.cursor(dictionary=True) as cursor_db:
+                            cursor_db.execute(f"DELETE FROM users WHERE user_id = %s", (this_user['user_id'],))
+                        connection.commit()
+                    continue
+
+        text = (f'کل مشترکین قبلی شما در دیتابیس: {result[0]}\n'
+                f'مشترکین واقعی: {valid_users}\n'
+                f'مشترکین بلاک شده: {invalid_user}\n'
+                f'مشترکین حال حاضر در دیتابیس: {valid_users}')
+        await app.edit_message_text(chat_id, this_msg.id, text)
         return
     elif text == 'سرچ در دیتابیس | ⚙️':
         await message.reply('برای سرچ کردن فیلم های موجود در دیتابیس ، فقط اسم را سرچ کنید:'
@@ -428,14 +473,6 @@ async def handler_text_admin(client_p: Client, message: types.Message):
         await message.reply('متنی که میخواهید برای تمامی کاربران بفرستید را اینجا ارسال کنید :)',
                             reply_markup=back_panel)
         step_admin[user_id] = 'sendAll'
-        return
-    elif text == 'تنظیم تعداد کاربران | 🙋🏻‍♂️':
-        this_msg = await message.reply('برای تنظیم تعداد کاربران یک عدد وارد کنید. برای مثال: 15000 (15 هزار کاربر)',
-                                       reply_to_message_id=msg_id)
-        await message.reply('لطفا فاصله اضافه نزارید، و فقط عدد وارد کنید :)')
-        await message.reply(f'در حال حاضر حداکثر تعداد کاربران برابر است با: {config.LIMIT_USERS}',
-                            reply_to_message_id=this_msg.id, reply_markup=back_panel)
-        step_admin[user_id] = 'editLimitUsers'
         return
 
     if user_id not in step_admin:
@@ -522,6 +559,9 @@ async def handler_text_admin(client_p: Client, message: types.Message):
         for res in result:
             try:
                 await app.send_message(res['user_id'], text)
+            except FloodWait as ex:
+                print(ex)
+                await asyncio.sleep(ex.value)
             except Exception as ex:
                 print(ex)
                 continue
