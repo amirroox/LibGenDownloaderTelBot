@@ -755,7 +755,7 @@ def data_seperator(data_dict: dict) -> list:
                 f"⭐️ Quick code copy: {code}\n\n"
                 f"ℹ️ {info}\n\n - * - \n\n")
         content += text
-        if j == 13:
+        if j == 5:
             result.append(content)
             content = ''
             j = 0
